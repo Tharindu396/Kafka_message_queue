@@ -1,0 +1,66 @@
+server:
+  # 8080 is Kafka UI and 8081 is the Schema Registry, so the API lives on 8090.
+  port: 8090
+
+spring:
+  application:
+    name: kafka-orders
+
+  # Run everything in one terminal by default.
+  # Split the demo across terminals with, e.g.:
+  #   mvn spring-boot:run -Dspring-boot.run.profiles=consumer,dlq
+  #   mvn spring-boot:run -Dspring-boot.run.profiles=producer
+  profiles:
+    default: producer,consumer,dlq
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+      acks: all
+      properties:
+        schema.registry.url: http://localhost:8081
+        auto.register.schemas: true
+
+    consumer:
+      group-id: orders-consumer-group
+      auto-offset-reset: earliest
+      # Offsets are committed by Spring only AFTER the listener returns successfully
+      # (or after the record has been handed to the DLQ), so nothing is silently lost.
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # ErrorHandlingDeserializer wraps the Avro deserializer so that a corrupt /
+      # non-Avro "poison pill" does not kill the consumer - it is routed to the DLQ.
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: io.confluent.kafka.serializers.KafkaAvroDeserializer
+        schema.registry.url: http://localhost:8081
+        specific.avro.reader: true
+
+    listener:
+      ack-mode: record
+      missing-topics-fatal: false
+
+app:
+  topics:
+    orders: orders
+    dlq: orders.DLQ
+    partitions: 3
+  producer:
+    interval-ms: 800        # one order every 0.8s
+  retry:
+    max-retries: 3          # 1 initial delivery + 3 retries, then -> DLQ
+    initial-interval-ms: 500
+    multiplier: 2.0
+    max-interval-ms: 4000
+
+logging:
+  level:
+    root: WARN
+    com.assignment.orders: INFO
+    org.apache.kafka: ERROR
+    org.springframework.kafka: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %-22logger{0} : %msg%n"

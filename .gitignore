@@ -1,0 +1,10 @@
+target/
+*.class
+.idea/
+*.iml
+.vscode/
+.mvn/
+mvnw
+mvnw.cmd
+run.log
+app.log
