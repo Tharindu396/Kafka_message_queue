@@ -99,8 +99,13 @@ an order every 0.8 seconds, which floods the console.
 request _you_ sent:
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=consumer,dlq
+mvn spring-boot:run "-Dspring-boot.run.profiles=consumer,dlq"
 ```
+
+> **Quote the `-D` argument.** On Windows, `mvn` is `mvn.cmd`, and the cmd tokenizer treats `=` and
+> `,` as argument separators — unquoted, the argument gets split and Maven fails with
+> *"Unknown lifecycle phase .run.profiles=consumer,dlq"*. The quoted form above works in PowerShell,
+> cmd and bash alike, so use it everywhere.
 
 | Profile    | Effect                                                            |
 | ---------- | ----------------------------------------------------------------- |
@@ -200,7 +205,7 @@ For `POST`, set the body type to **JSON**.
 
 Two things open:
 
-1. **A terminal** running `mvn spring-boot:run -Dspring-boot.run.profiles=consumer,dlq`
+1. **A terminal** running `mvn spring-boot:run "-Dspring-boot.run.profiles=consumer,dlq"`
 2. **Insomnia**, pointed at `http://localhost:8090`
 
 Each test below is one request. Watch both the JSON response _and_ the terminal.
@@ -493,7 +498,7 @@ docker exec kafka kafka-consumer-groups --bootstrap-server kafka:29092 \
 
 ## 9. Suggested demo order
 
-1. `docker compose up -d`, then `mvn spring-boot:run -Dspring-boot.run.profiles=consumer,dlq`
+1. `docker compose up -d`, then `mvn spring-boot:run "-Dspring-boot.run.profiles=consumer,dlq"`
 2. **§7.1** — schema is registered (Insomnia → Schema Registry)
 3. **§7.2** — send two orders, show the running average update, confirm with `GET /api/stats`
 4. **§7.4** — `FLAKY-ITEM`: retried twice, then succeeds, counted once
